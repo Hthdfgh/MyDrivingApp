@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kontakt | My Driving Plan</title>
+    <meta name="description" content="Kontakt – My Driving Plan" />
+
+    <!-- Force light look by default -->
+    <meta name="color-scheme" content="light" />
+
+    <!-- Favicons (relative paths work local + online) -->
+    <link rel="icon" type="image/png" href="images/faviconlight.png" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="images/favicondark.png"
+      media="(prefers-color-scheme: dark)"
+    />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body class="theme-light">
+    <main class="page">
+      <section class="card" aria-label="Kontaktformular">
+        <header class="cardTop">
+          <div class="brandRow">
+            <img class="logo" src="images/logolight.png" alt="My Driving Plan" />
+            <div class="brandText">
+              <div class="brandName">My Driving Plan</div>
+              <div class="brandSub">Kontakt</div>
+            </div>
+          </div>
+
+          <h1 class="title">Schreib uns</h1>
+          <p class="subtitle">
+            Kurze Frage, Feedback oder Support – schick uns eine Nachricht.
+            <a class="legalHint" href="legal/" aria-label="Zu Impressum und Datenschutz">
+              Impressum & Datenschutz
+            </a>
+          </p>
+        </header>
+
+        <form class="form" id="contactForm" autocomplete="on">
+          <div class="field">
+            <label class="fieldLabel" for="name">Name (optional)</label>
+            <input class="input" id="name" name="name" type="text" placeholder="Dein Name" />
+          </div>
+
+          <div class="field">
+            <label class="fieldLabel" for="email">E-Mail *</label>
+            <input
+              class="input"
+              id="email"
+              name="email"
+              type="email"
+              placeholder="name@email.com"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label class="fieldLabel" for="subject">Betreff (optional)</label>
+            <input class="input" id="subject" name="subject" type="text" placeholder="Worum geht’s?" />
+          </div>
+
+          <div class="field">
+            <label class="fieldLabel" for="message">Nachricht *</label>
+            <textarea
+              class="textarea"
+              id="message"
+              name="message"
+              placeholder="Schreib deine Nachricht…"
+              required
+            ></textarea>
+          </div>
+
+          <div class="actions">
+            <button class="btn" type="submit">Senden</button>
+            <div class="status" id="status" aria-live="polite"></div>
+          </div>
+
+          <p class="finePrint">
+            Mit dem Absenden verarbeiten wir deine Angaben zur Bearbeitung deiner Anfrage.
+            Details findest du unter <a class="link" href="legal/">Rechtliches</a>.
+          </p>
+        </form>
+
+        <footer class="footer">
+          <div>© <span id="year"></span> My Driving Plan</div>
+          <a class="footerLink" href="legal/">Rechtliches</a>
+        </footer>
+      </section>
+    </main>
+
+    <script>
+      document.getElementById("year").textContent = String(new Date().getFullYear());
+
+      // Later: connect to a Cloudflare Worker endpoint
+      const ENDPOINT = "/api/contact";
+
+      const form = document.getElementById("contactForm");
+      const statusEl = document.getElementById("status");
+
+      function setStatus(text, mode) {
+        statusEl.textContent = text || "";
+        statusEl.dataset.mode = mode || "";
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        setStatus("", "");
+
+        const payload = {
+          name: form.name.value.trim(),
+          email: form.email.value.trim(),
+          subject: form.subject.value.trim(),
+          message: form.message.value.trim(),
+          page: location.href,
+          userAgent: navigator.userAgent,
+        };
+
+        if (!payload.email || !payload.message) {
+          setStatus("Bitte E-Mail und Nachricht ausfüllen.", "error");
+          return;
+        }
+
+        const btn = form.querySelector("button[type='submit']");
+        btn.disabled = true;
+        btn.textContent = "Senden…";
+
+        try {
+          const res = await fetch(ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) throw new Error("bad_status");
+
+          form.reset();
+          setStatus("Nachricht gesendet.", "ok");
+        } catch (_) {
+          setStatus("Senden aktuell nicht verfügbar. Bitte später erneut versuchen.", "error");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Senden";
+        }
+      });
+    </script>
+  </body>
+</html>
